@@ -457,15 +457,25 @@ class Validator:
                         "validator/utilization": eval_duration / (gs_end - gs_start)
                     }, step=self.global_step)
 
-                    # Log per-UID metrics
+                    # Initialize the table once, outside of the loop
+                    if not hasattr(self, 'metrics_table'):
+                        columns = ['step', 'uid', 'step_score', 'moving_score', 'weight', 'original_weight']
+                        self.metrics_table = wandb.Table(columns=columns)
+
+                    # Collect per-UID metrics and add to the table
                     for uid_i in valid_score_indices:
                         uid = uid_i.item()
-                        wandb.log({
-                            f"validator/step_scores/{uid}": self.step_scores[uid_i].item(),
-                            f"validator/moving_scores/{uid}": self.scores[uid_i].item(),
-                            f"validator/weights/{uid}": self.weights[uid].item(),
-                            f"validator/original_weights/{uid}": original_weights[uid].item(),
-                        }, step=self.global_step)
+                        self.metrics_table.add_data(
+                            self.global_step,
+                            uid,
+                            self.step_scores[uid_i].item(),
+                            self.scores[uid_i].item(),
+                            self.weights[uid].item(),
+                            original_weights[uid].item(),
+                        )
+
+                    # Log the table
+                    wandb.log({'validator_metrics': self.metrics_table}, step=self.global_step)
                 # Set temperatured weights on the chain.
                 if self.current_block % 100 == 0:
                     tplr.logger.info(f"Setting weights on chain: {self.weights[ self.metagraph.uids ]}")
