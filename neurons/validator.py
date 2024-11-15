@@ -247,8 +247,8 @@ class Validator:
                 window = self.current_window - offset
 
 
-                # Save checkpoint every 500 steps
-                if self.global_step % 500 == 0:
+                # Save checkpoint every 10 steps
+                if self.global_step % 10 == 0:
                     tplr.logger.info(f"Scheduling checkpoint save at block {self.global_step}")
                     # Update last checkpoint block to avoid repeated saves at the same block
                     self.last_checkpoint_block = self.global_step
