@@ -176,6 +176,7 @@ class Validator:
         self.scores = torch.zeros( 256, dtype = torch.float32 ) 
         self.weights = torch.zeros( 256, dtype = torch.float32 ) 
         self.sample_rate = 1.0
+        self.last_upload_block = -1
         print ( self.hparams )
         
     async def update(self):
@@ -213,6 +214,7 @@ class Validator:
         self.loop = asyncio.get_running_loop()
         self.update_task = asyncio.create_task(self.update())
         self.listener = threading.Thread(target=self.block_listener, args=(self.loop,), daemon=True).start()
+
         
         # Optionally sync the model state by pulling model states from the history.
         if self.config.sync_state:
@@ -260,7 +262,14 @@ class Validator:
                         scores=self.scores,
                         weights=self.weights
                     ))
-                
+                # Periodically upload the full model
+                self.last_upload_block = await tplr.upload_master(
+                    bucket=self.config.bucket,
+                    model=self.model,
+                    wallet=self.wallet,
+                    subtensor=self.subtensor,
+                    last_upload_block=self.last_upload_block
+                )
                 # Download the state for the eval window.
                 st = tplr.T()
                 state_slices = await tplr.download_slices_for_buckets_and_windows(
